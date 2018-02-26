@@ -113,3 +113,9 @@ LOGO_KERNEL := $(notdir $(wildcard $(srctree)/logo_kernel.bmp))
 	@date
 	@echo -e '\n\t\t\tGeekbox: Something a little different!\n'
 	@echo
+ramdisk.cpio.gz:
+	cp $(objtree)/../buildroot-2017.11.2/output/images/rootfs.cpio.gz $(objtree)/ramdisk.cpio.gz
+x9_recovery.img: rk3368-box-x9.img ramdisk.cpio.gz
+	@echo 'X9 recovery image build'
+	mv $(objtree)/resource.img second_bootloader
+	$(Q)$(srctree)/mkbootimg --base 0x60400000 --pagesize 16384 --ramdisk_offset 0x62000000 --second_offset 0x60f00000 --tags_offset 0x60088000 --kernel $(objtree)/arch/arm64/boot/Image --ramdisk $(objtree)/ramdisk.cpio.gz --second $(objtree)/second_bootloader -o $@.img
