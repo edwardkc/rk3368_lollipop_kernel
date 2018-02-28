@@ -7,11 +7,11 @@
 static int init = 1;
 void rockchip_hdmiv2_cec_isr(struct hdmi_dev *hdmi_dev, char cec_int)
 {
-	CECDBG("%s cec 0x%x\n", __func__, cec_int);
+	HDMIDBG(1, "%s cec 0x%x\n", __func__, cec_int);
 	if (cec_int & m_EOM)
 		rockchip_hdmi_cec_submit_work(EVENT_RX_FRAME, 0, NULL);
 	if (cec_int & m_DONE)
-		CECDBG("send frame success\n");
+		HDMIDBG(1, "send frame success\n");
 }
 
 static int rockchip_hdmiv2_cec_readframe(struct hdmi *hdmi,
@@ -19,32 +19,33 @@ static int rockchip_hdmiv2_cec_readframe(struct hdmi *hdmi,
 {
 	struct hdmi_dev *hdmi_dev = hdmi->property->priv;
 	int i, count;
-	char *data = (char *)frame;
+	u8 *data = (u8 *)frame;
 
-	if (frame == NULL)
+	if (((hdmi_dev->clk_on & HDMI_PCLK_ON) == 0) || !frame)
 		return -1;
 	count = hdmi_readl(hdmi_dev, CEC_RX_CNT);
-	CECDBG("%s count %d\n", __func__, count);
+	HDMIDBG(1, "%s count %d\n", __func__, count);
 	for (i = 0; i < count; i++) {
 		data[i] = hdmi_readl(hdmi_dev, CEC_RX_DATA0 + i);
-		CECDBG("%02x\n", data[i]);
+		HDMIDBG(1, "%02x\n", data[i]);
 	}
 	frame->argcount = count - 2;
 	hdmi_writel(hdmi_dev, CEC_LOCK, 0x0);
 	return 0;
 }
 
-
 void rockchip_hdmiv2_cec_setcecla(struct hdmi *hdmi, int ceclgaddr)
 {
 	struct hdmi_dev *hdmi_dev = hdmi->property->priv;
 	short val;
 
+	if ((hdmi_dev->clk_on & HDMI_PCLK_ON) == 0)
+		return;
 	if (ceclgaddr < 0 || ceclgaddr > 16)
 		return;
 	val = 1 << ceclgaddr;
 	hdmi_writel(hdmi_dev, CEC_ADDR_L, val & 0xff);
-	hdmi_writel(hdmi_dev, CEC_ADDR_H, val>>8);
+	hdmi_writel(hdmi_dev, CEC_ADDR_H, val >> 8);
 }
 
 static int rockchip_hdmiv2_cec_sendframe(struct hdmi *hdmi,
@@ -53,14 +54,16 @@ static int rockchip_hdmiv2_cec_sendframe(struct hdmi *hdmi,
 	struct hdmi_dev *hdmi_dev = hdmi->property->priv;
 	int i, interrupt;
 
-	CECDBG("TX srcdestaddr %02x opcode %02x ",
-	       frame->srcdestaddr, frame->opcode);
+	if ((hdmi_dev->clk_on & HDMI_PCLK_ON) == 0)
+		return CEC_SEND_NACK;
+	HDMIDBG(1, "TX srcdestaddr %02x opcode %02x ",
+		frame->srcdestaddr, frame->opcode);
 	if (frame->argcount) {
-		CECDBG("args:");
+		HDMIDBG(1, "args:");
 		for (i = 0; i < frame->argcount; i++)
-			CECDBG("%02x ", frame->args[i]);
+			HDMIDBG(1, "%02x ", frame->args[i]);
 	}
-	CECDBG("\n");
+	HDMIDBG(1, "\n");
 	if ((frame->srcdestaddr & 0x0f) == ((frame->srcdestaddr >> 4) & 0x0f)) {
 		/*it is a ping command*/
 		hdmi_writel(hdmi_dev, CEC_TX_DATA0, frame->srcdestaddr);
@@ -89,7 +92,7 @@ static int rockchip_hdmiv2_cec_sendframe(struct hdmi *hdmi,
 			break;
 		}
 	}
-	CECDBG("%s interrupt 0x%02x\n", __func__, interrupt);
+	HDMIDBG(1, "%s interrupt 0x%02x\n", __func__, interrupt);
 	if (interrupt & m_DONE)
 		return CEC_SEND_SUCCESS;
 	else if (interrupt & m_NACK)
@@ -110,7 +113,8 @@ void rockchip_hdmiv2_cec_init(struct hdmi *hdmi)
 		init = 0;
 		/* init_waitqueue_head(&wait); */
 	}
+
 	hdmi_writel(hdmi_dev, IH_MUTE_CEC_STAT0, m_ERR_INITIATOR |
 			m_ARB_LOST | m_NACK | m_DONE);
-	CECDBG("%s", __func__);
+	HDMIDBG(1, "%s", __func__);
 }

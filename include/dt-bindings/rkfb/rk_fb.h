@@ -12,7 +12,16 @@
 #define NO_DUAL		0
 #define ONE_DUAL	1
 #define DUAL		2
+#define DUAL_LCD	3
 
+#define DEFAULT_MODE			0
+#define ONE_VOP_DUAL_MIPI_HOR_SCAN	1
+#define ONE_VOP_DUAL_MIPI_VER_SCAN	2
+#define TWO_VOP_TWO_SCREEN		3
+
+/********************************************************************
+**          display output interface supported by rockchip	   **
+********************************************************************/
 #define OUT_P888            0	//24bit screen,connect to lcdc D0~D23
 #define OUT_P666            1	//18bit screen,connect to lcdc D0~D17
 #define OUT_P565            2
@@ -23,6 +32,8 @@
 #define OUT_YUV_420	    14
 #define OUT_P101010	    15
 #define OUT_YUV_420_10BIT   16
+#define OUT_YUV_422	    12
+#define OUT_YUV_422_10BIT   17
 #define OUT_P16BPP4         24
 #define OUT_D888_P666       0x21	//18bit screen,connect to lcdc D2~D7, D10~D15, D18~D23
 #define OUT_D888_P565       0x22
@@ -40,6 +51,7 @@
 #define SCREEN_TVOUT_TEST  10
 #define SCREEN_LVDS_10BIT	 11
 #define SCREEN_DUAL_LVDS_10BIT   12
+#define SCREEN_DP		13
 
 #define LVDS_8BIT_1     0
 #define LVDS_8BIT_2     1
@@ -48,16 +60,29 @@
 #define LVDS_10BIT_1    4
 #define LVDS_10BIT_2    5
 
+/* x y mirror or rotate mode */
 #define NO_MIRROR	0
-#define X_MIRROR    	1
-#define Y_MIRROR    	2
-#define X_Y_MIRROR    	3
-#define ROTATE_90	4
-#define ROTATE_180	8
-#define ROTATE_270	12
+#define X_MIRROR	1 /* up-down flip*/
+#define Y_MIRROR	2 /* left-right flip */
+#define X_Y_MIRROR	3 /* the same as rotate 180 degrees */
+#define ROTATE_90	4 /* clockwise rotate 90 degrees */
+#define ROTATE_180	8 /* rotate 180 degrees
+			   * It is recommended to use X_Y_MIRROR
+			   * rather than ROTATE_180
+			   */
+#define ROTATE_270	12/* clockwise rotate 270 degrees */
 
-#define COLOR_RGB	0
-#define COLOR_YCBCR	1
+#define COLOR_RGB		0
+#define COLOR_RGB_BT2020	1
+/* default colorspace is bt601 */
+#define COLOR_YCBCR		2
+#define COLOR_YCBCR_BT709	3
+#define COLOR_YCBCR_BT2020	4
+
+#define IS_YUV_COLOR(x)                ((x) >= COLOR_YCBCR)
+
+#define SCREEN_VIDEO_MODE	0
+#define SCREEN_CMD_MODE		1
 
 /* fb win map */
 #define FB_DEFAULT_ORDER		0
@@ -72,7 +97,6 @@
 
 #define DISPLAY_POLICY_SDK	0
 #define DISPLAY_POLICY_BOX	1
-#define DISPLAY_POLICY_BOX_TEMP	2
 
 /*      	lvds connect config       
  *                                        

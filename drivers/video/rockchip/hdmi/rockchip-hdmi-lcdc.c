@@ -1,60 +1,921 @@
 #include "rockchip-hdmi.h"
 
 static const struct hdmi_video_timing hdmi_mode[] = {
-/*		name			refresh	xres	yres	pixclock	h_bp	h_fp	v_bp	v_fp	h_pw	v_pw			polariry			PorI	flag		vic		2ndvic		pixelrepeat	interface */
-
-	{ {	"720x480i@60Hz",	60,	720,    480,    27000000,	57,     19,	15,     4,	62,     3,			0,				1,      0	},	6,	HDMI_720X480I_60HZ_16_9,	2,	OUT_P888},
-	{ {	"720x576i@50Hz",	50,	720,	576,	27000000,	69,	12,	19,	2,	63,	3,			0,				1,	0	},	21,	HDMI_720X576I_50HZ_16_9,	2,	OUT_P888},
-	{ {	"720x480p@60Hz",	60,	720,	480,	27000000,	60,	16,	30,	9,	62,	6,			0,				0,	0	},	2,	HDMI_720X480P_60HZ_16_9,	1,	OUT_P888},
-	{ {	"720x576p@50Hz",	50,	720,	576,	27000000,	68,	12,	39,	5,	64,	5,			0,				0,	0	},	17,	HDMI_720X576P_50HZ_16_9,	1,	OUT_P888},
-	{ {	"1280x720p@24Hz",	24,	1280,	720,	59400000,	220,	1760,	20,	5,	40,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	60,	HDMI_1280X720P_24HZ_4_3,	1,	OUT_P888},
-	{ {	"1280x720p@25Hz",	25,	1280,	720,	74250000,	220,	2420,	20,	5,	40,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	61,	HDMI_1280X720P_25HZ_4_3,	1,	OUT_P888},
-	{ {	"1280x720p@30Hz",	30,	1280,	720,	74250000,	220,	1760,	20,	5,	40,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	62,	HDMI_1280X720P_30HZ_4_3,	1,	OUT_P888},
-	{ {	"1280x720p@50Hz",	50,	1280,	720,	74250000,	220,	440,	20,	5,	40,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	19,	HDMI_1280X720P_50HZ_4_3,	1,	OUT_P888},
-	{ {	"1280x720p@60Hz",	60,	1280,	720,	74250000,	220,	110,	20,	5,	40,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	4,	HDMI_1280X720P_60HZ_4_3,	1,	OUT_P888},
-	{ {	"1920x1080i@50Hz",	50,	1920,	1080,	74250000,	148,	528,	15,	2,	44,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	1,	0	},	20,	0,				1,	OUT_P888},
-	{ {	"1920x1080i@60Hz",	60,	1920,	1080,	74250000,	148,	88,	15,	2,	44,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	1,	0	},	5,	0,				1,	OUT_P888},
-	{ {	"1920x1080p@24Hz",	24,	1920,	1080,	74250000,	148,	638,	36,	4,	44,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	32,	HDMI_1920X1080P_24HZ_4_3,	1,	OUT_P888},
-	{ {	"1920x1080p@25Hz",	25,	1920,	1080,	74250000,	148,	528,	36,	4,	44,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	33,	HDMI_1920X1080P_25HZ_4_3,	1,	OUT_P888},
-	{ {	"1920x1080p@30Hz",	30,	1920,	1080,	74250000,	148,	88,	36,	4,	44,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	34,	HDMI_1920X1080P_30HZ_4_3,	1,	OUT_P888},
-	{ {	"1920x1080p@50Hz",	50,	1920,	1080,	148500000,	148,	528,	36,	4,	44,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	31,	HDMI_1920X1080P_50HZ_4_3,	1,	OUT_P888},
-	{ {	"1920x1080p@60Hz",	60,	1920,	1080,	148500000,	148,	88,	36,	4,	44,	5,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	16,	HDMI_1920X1080P_60HZ_4_3,	1,	OUT_P888},
-	{ {	"3840x2160p@24Hz",	24,	3840,	2160,	297000000,	296,	1276,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	93,	HDMI_3840X2160P_24HZ_4_3,	1,	OUT_P888},
-	{ {	"3840x2160p@25Hz",	25,	3840,	2160,	297000000,	296,	1056,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	94,	HDMI_3840X2160P_25HZ_4_3,	1,	OUT_P888},
-	{ {	"3840x2160p@30Hz",	30,	3840,	2160,	297000000,	296,	176,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	95,	HDMI_3840X2160P_30HZ_4_3,	1,	OUT_P888},
-	{ {	"4096x2160p@24Hz",	24,	4096,	2160,	297000000,	296,	1020,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	98,	0,				1,	OUT_P888},
-	{ {	"4096x2160p@25Hz",	25,	4096,	2160,	297000000,	128,	968,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	99,	0,				1,	OUT_P888},
-	{ {	"4096x2160p@30Hz",	30,	4096,	2160,	297000000,	128,	88,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	100,	0,				1,	OUT_P888},
-	{ {	"3840x2160p@50Hz",	50,	3840,	2160,	594000000,	296,	1056,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	96,	HDMI_3840X2160P_50HZ_4_3,	1,	OUT_P888},
-	{ {	"3840x2160p@60Hz",	60,	3840,	2160,	594000000,	296,	176,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	97,	HDMI_3840X2160P_60HZ_4_3,	1,	OUT_P888},
-	{ {	"4096x2160p@50Hz",	50,	4096,	2160,	594000000,	128,	968,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	101,	0,				1,	OUT_P888},
-	{ {	"4096x2160p@60Hz",	60,	4096,	2160,	594000000,	128,	88,	72,	8,	88,	10,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	102,	0,				1,	OUT_P888},
-	{ {	"800x600p@60Hz",	60,	800,	600,	40000000,	88,	40,	23,	1,	128,	4,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	1 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
-	{ {	"1024x768p@60Hz",	60,	1024,	768,	65000000,	160,	24,	29,	3,	136,	6,			0,				0,	0	},	2 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
-	{ {	"1280x960p@60Hz",	60,	1280,	960,	108000000,	312,	96,	36,	1,	112,	3,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	3 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
-	{ {	"1280x1024p@60Hz",	60,	1280,	1024,	108000000,	248,	48,	38,	1,	112,	3,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	4 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
-	{ {	"1360x768p@60Hz",	60,	1360,	768,	85500000,	256,	64,	18,	3,	112,	6,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	5 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
-	{ {	"1366x768p@60Hz",	60,	1366,	768,	85500000,	213,	70,	24,	3,	143,	3,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	6 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
-	{ {	"1440x900p@60Hz",	60,	1440,	900,	106500000,	232,	80,	25,	3,	152,	6,		FB_SYNC_VERT_HIGH_ACT,			0,	0	},	7 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
-	{ {	"1600x900p@60Hz",	60,	1600,	900,	108000000,	96,	24,	96,	1,	80,	3,	FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,	0,	0	},	8 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
-	{ {	"1680x1050@60Hz",	60,	1680,	1050,	146250000,	280,	104,	30,	3,	176,	6,		FB_SYNC_VERT_HIGH_ACT,			0,	0	},	9 | HDMI_VIDEO_DMT,	0,		1,	OUT_P888},
+	{
+		.mode = {
+			.name = "720x480i@60Hz",
+			.refresh = 60,
+			.xres = 720,
+			.yres = 480,
+			.pixclock = 27000000,
+			.left_margin = 57,
+			.right_margin = 19,
+			.upper_margin = 15,
+			.lower_margin = 4,
+			.hsync_len = 62,
+			.vsync_len = 3,
+			.sync = 0,
+			.vmode = FB_VMODE_INTERLACED,
+			.flag = 0,
+		},
+		.vic = HDMI_720X480I_60HZ_4_3,
+		.vic_2nd = HDMI_720X480I_60HZ_16_9,
+		.pixelrepeat = 2,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "720x576i@50Hz",
+			.refresh = 50,
+			.xres = 720,
+			.yres = 576,
+			.pixclock = 27000000,
+			.left_margin = 69,
+			.right_margin = 12,
+			.upper_margin = 19,
+			.lower_margin = 2,
+			.hsync_len = 63,
+			.vsync_len = 3,
+			.sync = 0,
+			.vmode = FB_VMODE_INTERLACED,
+			.flag = 0,
+		},
+		.vic = HDMI_720X576I_50HZ_4_3,
+		.vic_2nd = HDMI_720X576I_50HZ_16_9,
+		.pixelrepeat = 2,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "720x480p@60Hz",
+			.refresh = 60,
+			.xres = 720,
+			.yres = 480,
+			.pixclock = 27000000,
+			.left_margin = 60,
+			.right_margin = 16,
+			.upper_margin = 30,
+			.lower_margin = 9,
+			.hsync_len = 62,
+			.vsync_len = 6,
+			.sync = 0,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_720X480P_60HZ_4_3,
+		.vic_2nd = HDMI_720X480P_60HZ_16_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "720x576p@50Hz",
+			.refresh = 50,
+			.xres = 720,
+			.yres = 576,
+			.pixclock = 27000000,
+			.left_margin = 68,
+			.right_margin = 12,
+			.upper_margin = 39,
+			.lower_margin = 5,
+			.hsync_len = 64,
+			.vsync_len = 5,
+			.sync = 0,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_720X576P_50HZ_4_3,
+		.vic_2nd = HDMI_720X576P_50HZ_16_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1280x720p@24Hz",
+			.refresh = 24,
+			.xres = 1280,
+			.yres = 720,
+			.pixclock = 59400000,
+			.left_margin = 220,
+			.right_margin = 1760,
+			.upper_margin = 20,
+			.lower_margin = 5,
+			.hsync_len = 40,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1280X720P_24HZ,
+		.vic_2nd = HDMI_1280X720P_24HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1280x720p@25Hz",
+			.refresh = 25,
+			.xres = 1280,
+			.yres = 720,
+			.pixclock = 74250000,
+			.left_margin = 220,
+			.right_margin = 2420,
+			.upper_margin = 20,
+			.lower_margin = 5,
+			.hsync_len = 40,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1280X720P_25HZ,
+		.vic_2nd = HDMI_1280X720P_25HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1280x720p@30Hz",
+			.refresh = 30,
+			.xres = 1280,
+			.yres = 720,
+			.pixclock = 74250000,
+			.left_margin = 220,
+			.right_margin = 1760,
+			.upper_margin = 20,
+			.lower_margin = 5,
+			.hsync_len = 40,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1280X720P_30HZ,
+		.vic_2nd = HDMI_1280X720P_30HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1280x720p@50Hz",
+			.refresh = 50,
+			.xres = 1280,
+			.yres = 720,
+			.pixclock = 74250000,
+			.left_margin = 220,
+			.right_margin = 440,
+			.upper_margin = 20,
+			.lower_margin = 5,
+			.hsync_len = 40,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1280X720P_50HZ,
+		.vic_2nd = HDMI_1280X720P_50HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1280x720p@60Hz",
+			.refresh = 60,
+			.xres = 1280,
+			.yres = 720,
+			.pixclock = 74250000,
+			.left_margin = 220,
+			.right_margin = 110,
+			.upper_margin = 20,
+			.lower_margin = 5,
+			.hsync_len = 40,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1280X720P_60HZ,
+		.vic_2nd = HDMI_1280X720P_60HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1920x1080i@50Hz",
+			.refresh = 50,
+			.xres = 1920,
+			.yres = 1080,
+			.pixclock = 74250000,
+			.left_margin = 148,
+			.right_margin = 528,
+			.upper_margin = 15,
+			.lower_margin = 2,
+			.hsync_len = 44,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = FB_VMODE_INTERLACED,
+			.flag = 0,
+		},
+		.vic = HDMI_1920X1080I_50HZ,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1920x1080i@60Hz",
+			.refresh = 60,
+			.xres = 1920,
+			.yres = 1080,
+			.pixclock = 74250000,
+			.left_margin = 148,
+			.right_margin = 88,
+			.upper_margin = 15,
+			.lower_margin = 2,
+			.hsync_len = 44,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = FB_VMODE_INTERLACED,
+			.flag = 0,
+		},
+		.vic = HDMI_1920X1080I_60HZ,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1920x1080p@24Hz",
+			.refresh = 24,
+			.xres = 1920,
+			.yres = 1080,
+			.pixclock = 74250000,
+			.left_margin = 148,
+			.right_margin = 638,
+			.upper_margin = 36,
+			.lower_margin = 4,
+			.hsync_len = 44,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1920X1080P_24HZ,
+		.vic_2nd = HDMI_1920X1080P_24HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1920x1080p@25Hz",
+			.refresh = 25,
+			.xres = 1920,
+			.yres = 1080,
+			.pixclock = 74250000,
+			.left_margin = 148,
+			.right_margin = 528,
+			.upper_margin = 36,
+			.lower_margin = 4,
+			.hsync_len = 44,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1920X1080P_25HZ,
+		.vic_2nd = HDMI_1920X1080P_25HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1920x1080p@30Hz",
+			.refresh = 30,
+			.xres = 1920,
+			.yres = 1080,
+			.pixclock = 74250000,
+			.left_margin = 148,
+			.right_margin = 88,
+			.upper_margin = 36,
+			.lower_margin = 4,
+			.hsync_len = 44,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1920X1080P_30HZ,
+		.vic_2nd = HDMI_1920X1080P_30HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1920x1080p@50Hz",
+			.refresh = 50,
+			.xres = 1920,
+			.yres = 1080,
+			.pixclock = 148500000,
+			.left_margin = 148,
+			.right_margin = 528,
+			.upper_margin = 36,
+			.lower_margin = 4,
+			.hsync_len = 44,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1920X1080P_50HZ,
+		.vic_2nd = HDMI_1920X1080P_50HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1920x1080p@60Hz",
+			.refresh = 60,
+			.xres = 1920,
+			.yres = 1080,
+			.pixclock = 148500000,
+			.left_margin = 148,
+			.right_margin = 88,
+			.upper_margin = 36,
+			.lower_margin = 4,
+			.hsync_len = 44,
+			.vsync_len = 5,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_1920X1080P_60HZ,
+		.vic_2nd = HDMI_1920X1080P_60HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "3840x2160p@24Hz",
+			.refresh = 24,
+			.xres = 3840,
+			.yres = 2160,
+			.pixclock = 297000000,
+			.left_margin = 296,
+			.right_margin = 1276,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_3840X2160P_24HZ,
+		.vic_2nd = HDMI_3840X2160P_24HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "3840x2160p@25Hz",
+			.refresh = 25,
+			.xres = 3840,
+			.yres = 2160,
+			.pixclock = 297000000,
+			.left_margin = 296,
+			.right_margin = 1056,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_3840X2160P_25HZ,
+		.vic_2nd = HDMI_3840X2160P_25HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "3840x2160p@30Hz",
+			.refresh = 30,
+			.xres = 3840,
+			.yres = 2160,
+			.pixclock = 297000000,
+			.left_margin = 296,
+			.right_margin = 176,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_3840X2160P_30HZ,
+		.vic_2nd = HDMI_3840X2160P_30HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "4096x2160p@24Hz",
+			.refresh = 24,
+			.xres = 4096,
+			.yres = 2160,
+			.pixclock = 297000000,
+			.left_margin = 296,
+			.right_margin = 1020,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_4096X2160P_24HZ,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "4096x2160p@25Hz",
+			.refresh = 25,
+			.xres = 4096,
+			.yres = 2160,
+			.pixclock = 297000000,
+			.left_margin = 128,
+			.right_margin = 968,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_4096X2160P_25HZ,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "4096x2160p@30Hz",
+			.refresh = 30,
+			.xres = 4096,
+			.yres = 2160,
+			.pixclock = 297000000,
+			.left_margin = 128,
+			.right_margin = 88,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_4096X2160P_30HZ,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "3840x2160p@50Hz",
+			.refresh = 50,
+			.xres = 3840,
+			.yres = 2160,
+			.pixclock = 594000000,
+			.left_margin = 296,
+			.right_margin = 1056,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_3840X2160P_50HZ,
+		.vic_2nd = HDMI_3840X2160P_50HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "3840x2160p@60Hz",
+			.refresh = 60,
+			.xres = 3840,
+			.yres = 2160,
+			.pixclock = 594000000,
+			.left_margin = 296,
+			.right_margin = 176,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_3840X2160P_60HZ,
+		.vic_2nd = HDMI_3840X2160P_60HZ_21_9,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "4096x2160p@50Hz",
+			.refresh = 50,
+			.xres = 4096,
+			.yres = 2160,
+			.pixclock = 594000000,
+			.left_margin = 128,
+			.right_margin = 968,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_4096X2160P_50HZ,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "4096x2160p@60Hz",
+			.refresh = 60,
+			.xres = 4096,
+			.yres = 2160,
+			.pixclock = 594000000,
+			.left_margin = 128,
+			.right_margin = 88,
+			.upper_margin = 72,
+			.lower_margin = 8,
+			.hsync_len = 88,
+			.vsync_len = 10,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_4096X2160P_60HZ,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "800x600p@60Hz",
+			.refresh = 60,
+			.xres = 800,
+			.yres = 600,
+			.pixclock = 40000000,
+			.left_margin = 88,
+			.right_margin = 40,
+			.upper_margin = 23,
+			.lower_margin = 1,
+			.hsync_len = 128,
+			.vsync_len = 4,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 1,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1024x768p@60Hz",
+			.refresh = 60,
+			.xres = 1024,
+			.yres = 768,
+			.pixclock = 65000000,
+			.left_margin = 160,
+			.right_margin = 24,
+			.upper_margin = 29,
+			.lower_margin = 3,
+			.hsync_len = 136,
+			.vsync_len = 6,
+			.sync = 0,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 2,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1280x960p@60Hz",
+			.refresh = 60,
+			.xres = 1280,
+			.yres = 960,
+			.pixclock = 108000000,
+			.left_margin = 312,
+			.right_margin = 96,
+			.upper_margin = 36,
+			.lower_margin = 1,
+			.hsync_len = 112,
+			.vsync_len = 3,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 3,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1280x1024p@60Hz",
+			.refresh = 60,
+			.xres = 1280,
+			.yres = 1024,
+			.pixclock = 108000000,
+			.left_margin = 248,
+			.right_margin = 48,
+			.upper_margin = 38,
+			.lower_margin = 1,
+			.hsync_len = 112,
+			.vsync_len = 3,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 4,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1360x768p@60Hz",
+			.refresh = 60,
+			.xres = 1360,
+			.yres = 768,
+			.pixclock = 85500000,
+			.left_margin = 256,
+			.right_margin = 64,
+			.upper_margin = 18,
+			.lower_margin = 3,
+			.hsync_len = 112,
+			.vsync_len = 6,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 5,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1366x768p@60Hz",
+			.refresh = 60,
+			.xres = 1366,
+			.yres = 768,
+			.pixclock = 85500000,
+			.left_margin = 213,
+			.right_margin = 70,
+			.upper_margin = 24,
+			.lower_margin = 3,
+			.hsync_len = 143,
+			.vsync_len = 3,
+			.sync = FB_SYNC_HOR_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 6,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1440x900p@60Hz",
+			.refresh = 60,
+			.xres = 1440,
+			.yres = 900,
+			.pixclock = 106500000,
+			.left_margin = 232,
+			.right_margin = 80,
+			.upper_margin = 25,
+			.lower_margin = 3,
+			.hsync_len = 152,
+			.vsync_len = 6,
+			.sync = FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 7,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1600x900p@60Hz",
+			.refresh = 60,
+			.xres = 1600,
+			.yres = 900,
+			.pixclock = 108000000,
+			.left_margin = 96,
+			.right_margin = 24,
+			.upper_margin = 96,
+			.lower_margin = 1,
+			.hsync_len = 80,
+			.vsync_len = 3,
+			.sync = FB_SYNC_VERT_HIGH_ACT | FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 8,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1680x1050@60Hz",
+			.refresh = 60,
+			.xres = 1680,
+			.yres = 1050,
+			.pixclock = 146250000,
+			.left_margin = 280,
+			.right_margin = 104,
+			.upper_margin = 30,
+			.lower_margin = 3,
+			.hsync_len = 176,
+			.vsync_len = 6,
+			.sync = FB_SYNC_VERT_HIGH_ACT,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DMT | 9,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		.mode = {
+			.name = "1440x1280@60Hz",
+			.refresh = 60,
+			.xres = 1440,
+			.yres = 1280,
+			.pixclock = 148500000,
+			.left_margin = 84,
+			.right_margin = 360,
+			.upper_margin = 8,
+			.lower_margin = 10,
+			.hsync_len = 20,
+			.vsync_len = 2,
+			.sync = 0,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DISCRETE_VR | 1,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		/* AUO 3.81 */
+		.mode = {
+			.name = "2160x1200@75Hz",
+			.refresh = 75,
+			.xres = 2160,
+			.yres = 1200,
+			.pixclock = 245000000,
+			.left_margin = 100,
+			.right_margin = 420,
+			.upper_margin = 3,
+			.lower_margin = 6,
+			.hsync_len = 32,
+			.vsync_len = 3,
+			.sync = 0,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DISCRETE_VR | 3,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		/* sharp 2.89 */
+		.mode = {
+			.name = "2880x1440@75Hz",
+			.refresh = 75,
+			.xres = 2880,
+			.yres = 1440,
+			.pixclock = 340000000,
+			.left_margin = 100,
+			.right_margin = 50,
+			.upper_margin = 8,
+			.lower_margin = 6,
+			.hsync_len = 50,
+			.vsync_len = 1,
+			.sync = 0,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DISCRETE_VR | 4,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		/* RAYKEN 5.46 */
+		.mode = {
+			.name = "1440x2560@60Hz",
+			.refresh = 60,
+			.xres = 1440,
+			.yres = 2560,
+			.pixclock = 268500000,
+			.left_margin = 50,
+			.right_margin = 200,
+			.upper_margin = 20,
+			.lower_margin = 20,
+			.hsync_len = 20,
+			.vsync_len = 10,
+			.sync = 0,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DISCRETE_VR | 5,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
+	{
+		/* samsung */
+		.mode = {
+			.name = "1440x2560@70Hz",
+			.refresh = 70,
+			.xres = 1440,
+			.yres = 2560,
+			.pixclock = 285000000,
+			.left_margin = 40,
+			.right_margin = 80,
+			.upper_margin = 2,
+			.lower_margin = 6,
+			.hsync_len = 20,
+			.vsync_len = 8,
+			.sync = 0,
+			.vmode = 0,
+			.flag = 0,
+		},
+		.vic = HDMI_VIDEO_DISCRETE_VR | 6,
+		.vic_2nd = 0,
+		.pixelrepeat = 1,
+		.interface = OUT_P888,
+	},
 };
 
 static int hdmi_set_info(struct rk_screen *screen, struct hdmi *hdmi)
 {
-	int i, vic;
+	int i, vic, colorimetry;
 	struct fb_videomode *mode;
 
-	if (screen == NULL || hdmi == NULL)
+	if (!screen || !hdmi)
 		return HDMI_ERROR_FALSE;
 
 	if (hdmi->vic == 0)
 		hdmi->vic = hdmi->property->defaultmode;
 
-	if (hdmi->vic & HDMI_VIDEO_DMT)
-		vic = hdmi->vic;
-	else
-		vic = hdmi->vic & HDMI_VIC_MASK;
+	if (hdmi->edid_auto_support) {
+		if ((hdmi->vic & HDMI_VIDEO_DMT) ||
+		    (hdmi->vic & HDMI_VIDEO_DISCRETE_VR)) {
+			if (hdmi->prop.value.vic)
+				vic = hdmi->prop.value.vic;
+			else
+				vic = hdmi->vic;
+		} else {
+			vic = hdmi->vic & HDMI_VIC_MASK;
+		}
+	} else {
+		if ((hdmi->vic & HDMI_VIDEO_DMT) ||
+		    (hdmi->vic & HDMI_VIDEO_DISCRETE_VR))
+			vic = hdmi->vic;
+		else
+			vic = hdmi->vic & HDMI_VIC_MASK;
+	}
+
 	for (i = 0; i < ARRAY_SIZE(hdmi_mode); i++) {
 		if (hdmi_mode[i].vic == vic ||
 		    hdmi_mode[i].vic_2nd == vic)
@@ -67,10 +928,25 @@ static int hdmi_set_info(struct rk_screen *screen, struct hdmi *hdmi)
 
 	/* screen type & face */
 	screen->type = SCREEN_HDMI;
-	if (hdmi->video.color_input == HDMI_COLOR_RGB_0_255)
+	colorimetry = hdmi->video.colorimetry;
+	mode = (struct fb_videomode *)&hdmi_mode[i].mode;
+	if (hdmi->video.color_input == HDMI_COLOR_RGB_0_255) {
 		screen->color_mode = COLOR_RGB;
-	else
+	} else if (colorimetry > HDMI_COLORIMETRY_EXTEND_ADOBE_RGB) {
+		screen->color_mode = COLOR_YCBCR_BT2020;
+		if (hdmi->video.eotf == EOTF_ST_2084)
+			screen->data_space = 1;
+	} else if (colorimetry == HDMI_COLORIMETRY_NO_DATA) {
+		if (mode->xres > 720 && mode->yres > 576)
+			screen->color_mode = COLOR_YCBCR_BT709;
+		else
+			screen->color_mode = COLOR_YCBCR;
+	} else if (colorimetry == HDMI_COLORIMETRY_SMTPE_170M) {
 		screen->color_mode = COLOR_YCBCR;
+	} else {
+		screen->color_mode = COLOR_YCBCR_BT709;
+	}
+
 	if (hdmi->vic & HDMI_VIDEO_YUV420) {
 		if (hdmi->video.color_output_depth == 10)
 			screen->face = OUT_YUV_420_10BIT;
@@ -83,8 +959,6 @@ static int hdmi_set_info(struct rk_screen *screen, struct hdmi *hdmi)
 			screen->face = hdmi_mode[i].interface;
 	}
 	screen->pixelrepeat = hdmi_mode[i].pixelrepeat - 1;
-	mode = (struct fb_videomode *)&(hdmi_mode[i].mode);
-
 	screen->mode = *mode;
 	if (hdmi->video.format_3d == HDMI_3D_FRAME_PACKING) {
 		screen->mode.pixclock = 2 * mode->pixclock;
@@ -102,10 +976,6 @@ static int hdmi_set_info(struct rk_screen *screen, struct hdmi *hdmi)
 		}
 	}
 	/* Pin polarity */
-	#ifdef CONFIG_HDMI_RK616
-	screen->pin_hsync = 0;
-	screen->pin_vsync = 0;
-	#else
 	if (FB_SYNC_HOR_HIGH_ACT & mode->sync)
 		screen->pin_hsync = 1;
 	else
@@ -114,14 +984,15 @@ static int hdmi_set_info(struct rk_screen *screen, struct hdmi *hdmi)
 		screen->pin_vsync = 1;
 	else
 		screen->pin_vsync = 0;
-	#endif
+
 	screen->pin_den = 0;
 	screen->pin_dclk = 1;
 
 	/* Swap rule */
-	if (hdmi->soctype == HDMI_SOC_RK3368 &&
-	    screen->color_mode == COLOR_YCBCR &&
-	    screen->face == OUT_P888)
+	if (hdmi->soctype > HDMI_SOC_RK312X &&
+	    screen->color_mode > COLOR_RGB &&
+	    (screen->face == OUT_P888 ||
+	     screen->face == OUT_P101010))
 		screen->swap_rb = 1;
 	else
 		screen->swap_rb = 0;
@@ -138,6 +1009,15 @@ static int hdmi_set_info(struct rk_screen *screen, struct hdmi *hdmi)
 	screen->overscan.top = hdmi->yscale;
 	screen->overscan.right = hdmi->xscale;
 	screen->overscan.bottom = hdmi->yscale;
+
+	screen->width = hdmi->prop.value.width;
+	screen->height = hdmi->prop.value.height;
+	pr_info("%s:line=%d %d %d %d %d %d %d %d %d\n",
+		__func__, __LINE__, screen->mode.xres, screen->mode.yres,
+		screen->mode.left_margin, screen->mode.right_margin,
+		screen->mode.upper_margin, screen->mode.lower_margin,
+		screen->mode.hsync_len, screen->mode.vsync_len);
+
 	return 0;
 }
 
@@ -152,9 +1032,9 @@ static int hdmi_set_info(struct rk_screen *screen, struct hdmi *hdmi)
 int hdmi_find_best_mode(struct hdmi *hdmi, int vic)
 {
 	struct list_head *pos, *head = &hdmi->edid.modelist;
-	struct display_modelist *modelist;
+	struct display_modelist *modelist = NULL;
 	int found = 0;
-/*	pr_info("%s vic %d\n", __FUNCTION__, vic); */
+
 	if (vic) {
 		list_for_each(pos, head) {
 			modelist =
@@ -166,23 +1046,22 @@ int hdmi_find_best_mode(struct hdmi *hdmi, int vic)
 			}
 		}
 	}
-	if ((vic == 0 || found == 0) && head->next != head) {
+	if ((!vic || !found) && head->next != head) {
 		/* If parse edid error, we select default mode; */
-		if (hdmi->edid.specs == NULL ||
-		    hdmi->edid.specs->modedb_len == 0)
-			return hdmi->property->defaultmode;
-			/*modelist = list_entry(head->prev,
-					struct display_modelist, list);*/
-		else
+		if (hdmi->edid.specs &&
+		    hdmi->edid.specs->modedb_len)
 			modelist = list_entry(head->next,
 					      struct display_modelist, list);
+		else
+			return hdmi->property->defaultmode;
 	}
 
-	if (modelist != NULL)
+	if (modelist)
 		return modelist->vic;
 	else
 		return 0;
 }
+
 /**
  * hdmi_set_lcdc: switch lcdc mode to required video mode
  * @hdmi:
@@ -196,14 +1075,8 @@ int hdmi_set_lcdc(struct hdmi *hdmi)
 	struct rk_screen screen;
 
 	rc = hdmi_set_info(&screen, hdmi);
-
-	if (rc == 0) {
+	if (!rc)
 		rk_fb_switch_screen(&screen, 1, hdmi->lcdc->id);
-/*		if (rk_fb_get_display_policy() != DISPLAY_POLICY_BOX)
-			rk_fb_disp_scale(hdmi->xscale,
-					 hdmi->yscale,
-					 hdmi->lcdc->id);
-*/	}
 	return rc;
 }
 
@@ -266,6 +1139,18 @@ int hdmi_add_vic(int vic, struct list_head *head)
 	if (vic == 0)
 		return -1;
 
+	if (vic & HDMI_VIDEO_YUV420) {
+		v = vic & 0xff;
+		if (v != HDMI_3840X2160P_50HZ &&
+		    v != HDMI_3840X2160P_60HZ &&
+		    v != HDMI_4096X2160P_50HZ &&
+		    v != HDMI_4096X2160P_60HZ &&
+		    v != HDMI_3840X2160P_50HZ_21_9 &&
+		    v != HDMI_3840X2160P_60HZ_21_9) {
+			return -1;
+		}
+	}
+
 	list_for_each(pos, head) {
 		modelist = list_entry(pos, struct display_modelist, list);
 		v = modelist->vic;
@@ -304,7 +1189,7 @@ static int hdmi_add_videomode(const struct fb_videomode *mode,
 	int i, found = 0;
 
 	for (i = 0; i < ARRAY_SIZE(hdmi_mode); i++) {
-		m = (struct fb_videomode *)&(hdmi_mode[i].mode);
+		m = (struct fb_videomode *)&hdmi_mode[i].mode;
 		if (fb_mode_is_equal(m, mode)) {
 			found = 1;
 			break;
@@ -351,8 +1236,8 @@ static void hdmi_sort_modelist(struct hdmi_edid *edid, int feature)
 		modelist = list_entry(pos, struct display_modelist, list);
 		/*pr_info("%s vic %d\n", __function__, modelist->vic);*/
 		for (i = 0; i < ARRAY_SIZE(hdmi_mode); i++) {
-			if (modelist->vic & HDMI_VIDEO_DMT) {
-				if (feature & SUPPORT_VESA_DMT)
+			if ((modelist->vic & HDMI_VIDEO_DMT) || (modelist->vic & HDMI_VIDEO_DISCRETE_VR)) {
+				if (feature & (SUPPORT_VESA_DMT | SUPPORT_RK_DISCRETE_VR))
 					vic = modelist->vic;
 				else
 					continue;
@@ -376,23 +1261,20 @@ static void hdmi_sort_modelist(struct hdmi_edid *edid, int feature)
 					continue;
 				if ((feature & SUPPORT_1080I) == 0 &&
 				    hdmi_mode[i].mode.xres == 1920 &&
-				    hdmi_mode[i].mode.vmode ==
-				    FB_VMODE_INTERLACED)
+				    (hdmi_mode[i].mode.vmode &
+				     FB_VMODE_INTERLACED))
 					continue;
 				if ((feature & SUPPORT_480I_576I) == 0 &&
 				    hdmi_mode[i].mode.xres == 720 &&
-				    hdmi_mode[i].mode.vmode ==
-				    FB_VMODE_INTERLACED)
+				    hdmi_mode[i].mode.vmode &
+				     FB_VMODE_INTERLACED)
 					continue;
-				vic = modelist->vic;
-				modelist->vic = hdmi_mode[i].vic;
 				modelist->mode = hdmi_mode[i].mode;
-				if (vic & HDMI_VIDEO_YUV420) {
-					modelist->vic |= HDMI_VIDEO_YUV420;
+				if (modelist->vic & HDMI_VIDEO_YUV420)
 					modelist->mode.flag = 1;
-				}
+
 				compare = 1;
-				m = (struct fb_videomode *)&(modelist->mode);
+				m = (struct fb_videomode *)&modelist->mode;
 				list_for_each(pos_new, &head_new) {
 					modelist_new =
 					list_entry(pos_new,
@@ -429,10 +1311,70 @@ static void hdmi_sort_modelist(struct hdmi_edid *edid, int feature)
 	}
 }
 
+static int edid_select_prop_value(struct hdmi *hdmi)
+{
+	struct edid_prop_value *prop_value = NULL;
+	int nstates = 0;
+	int i, vid, pid, sn, xres, yres, reboot = 0;
+
+	prop_value = hdmi->pvalue;
+	nstates = hdmi->nstates;
+
+	if (!prop_value) {
+		pr_info("%s:pvalue is NULL\n", __func__);
+		return -1;
+	}
+
+	vid = hdmi->edid.value.vid;
+	pid = hdmi->edid.value.pid;
+	sn = hdmi->edid.value.sn;
+	xres = hdmi->edid.value.xres;
+	yres = hdmi->edid.value.yres;
+
+	for (i = 0; i < nstates; i++) {
+		if ((prop_value[i].vid == vid) &&
+		    (prop_value[i].pid == pid) &&
+		    (prop_value[i].sn == sn) &&
+		    (prop_value[i].xres == xres) &&
+		    (prop_value[i].yres == yres)) {
+			hdmi->edid.value = prop_value[i];
+			hdmi->prop.value = prop_value[i];
+			if ((hdmi->prop.valid) &&
+			    ((hdmi->prop.last_vid != vid) ||
+			    (hdmi->prop.last_pid != pid) ||
+			    (hdmi->prop.last_sn != sn) ||
+			    (hdmi->prop.last_xres != xres) ||
+			    (hdmi->prop.last_yres != yres))) {
+				reboot = 1;
+			} else {
+				reboot = 0;
+			}
+
+			hdmi->prop.last_vid = vid;
+			hdmi->prop.last_pid = pid;
+			hdmi->prop.last_sn = sn;
+			hdmi->prop.last_xres = xres;
+			hdmi->prop.last_yres = yres;
+			hdmi->prop.valid = 1;
+			pr_info("%s:i=%d reboot=%d,valid=%d\n",
+				__func__, i, reboot, hdmi->prop.valid);
+
+			break;
+		}
+	}
+
+	if (reboot) {
+		dev_info(hdmi->dev, "%s:kernel_restart\n", __func__);
+		kernel_restart(NULL);
+	}
+
+	return 0;
+}
+
 /**
  * hdmi_ouputmode_select - select hdmi transmitter output mode: hdmi or dvi?
  * @hdmi: handle of hdmi
- * @edid_ok: get EDID data success or not, HDMI_ERROR_SUCESS means success.
+ * @edid_ok: get EDID data success or not, HDMI_ERROR_SUCCESS means success.
  */
 int hdmi_ouputmode_select(struct hdmi *hdmi, int edid_ok)
 {
@@ -441,7 +1383,7 @@ int hdmi_ouputmode_select(struct hdmi *hdmi, int edid_ok)
 	struct fb_videomode *modedb = NULL, *mode = NULL;
 	int i, pixclock, feature = hdmi->property->feature;
 
-	if (edid_ok != HDMI_ERROR_SUCESS) {
+	if (edid_ok != HDMI_ERROR_SUCCESS) {
 		dev_err(hdmi->dev, "warning: EDID error, assume sink as HDMI !!!!");
 		hdmi->edid.status = -1;
 		hdmi->edid.sink_hdmi = 1;
@@ -450,13 +1392,16 @@ int hdmi_ouputmode_select(struct hdmi *hdmi, int edid_ok)
 		hdmi->edid.ycbcr422 = 0;
 	}
 
+	if (hdmi->edid_auto_support)
+		edid_select_prop_value(hdmi);
+
 	if (head->next == head) {
 		dev_info(hdmi->dev,
 			 "warning: no CEA video mode parsed from EDID !!!!\n");
 		/* If EDID get error, list all system supported mode.
-		   If output mode is set to DVI and EDID is ok, check
-		   the output timing.
-		*/
+		 * If output mode is set to DVI and EDID is ok, check
+		 * the output timing.
+		 */
 		if (hdmi->edid.sink_hdmi == 0 && specs && specs->modedb_len) {
 			/* Get max resolution timing */
 			modedb = &specs->modedb[0];
@@ -469,8 +1414,9 @@ int hdmi_ouputmode_select(struct hdmi *hdmi, int edid_ok)
 					modedb = &specs->modedb[i];
 			}
 			/* For some monitor, the max pixclock read from EDID
-			   is smaller than the clock of max resolution mode
-			   supported. We fix it. */
+			 * is smaller than the clock of max resolution mode
+			 * supported. We fix it.
+			 */
 			pixclock = PICOS2KHZ(modedb->pixclock);
 			pixclock /= 250;
 			pixclock *= 250;
@@ -482,7 +1428,7 @@ int hdmi_ouputmode_select(struct hdmi *hdmi, int edid_ok)
 		}
 
 		for (i = 0; i < ARRAY_SIZE(hdmi_mode); i++) {
-			mode = (struct fb_videomode *)&(hdmi_mode[i].mode);
+			mode = (struct fb_videomode *)&hdmi_mode[i].mode;
 			if (modedb) {
 				if ((mode->pixclock < specs->dclkmin) ||
 				    (mode->pixclock > specs->dclkmax) ||
@@ -493,11 +1439,13 @@ int hdmi_ouputmode_select(struct hdmi *hdmi, int edid_ok)
 					continue;
 			} else {
 				/* If there is no valid information in EDID,
-				   just list common hdmi foramt. */
+				 * just list common hdmi foramt.
+				 */
 				if (mode->xres > 3840 ||
 				    mode->refresh < 50 ||
-				    mode->vmode == FB_VMODE_INTERLACED ||
-				    hdmi_mode[i].vic & HDMI_VIDEO_DMT)
+				    (mode->vmode & FB_VMODE_INTERLACED) ||
+				    hdmi_mode[i].vic & HDMI_VIDEO_DMT ||
+				    hdmi_mode[i].vic & HDMI_VIDEO_DISCRETE_VR)
 					continue;
 			}
 			if ((feature & SUPPORT_TMDS_600M) == 0 &&
@@ -511,17 +1459,18 @@ int hdmi_ouputmode_select(struct hdmi *hdmi, int edid_ok)
 				continue;
 			if ((feature & SUPPORT_1080I) == 0 &&
 			    mode->xres == 1920 &&
-			    mode->vmode == FB_VMODE_INTERLACED)
+			    (mode->vmode & FB_VMODE_INTERLACED))
 				continue;
 			if ((feature & SUPPORT_480I_576I) == 0 &&
 			    mode->xres == 720 &&
-			    mode->vmode == FB_VMODE_INTERLACED)
+			    (mode->vmode & FB_VMODE_INTERLACED))
 				continue;
 			hdmi_add_videomode(mode, head);
 		}
 	} else {
 		/* There are some video mode is not defined in EDID extend
-		   block, so we need to check first block data.*/
+		 * block, so we need to check first block data.
+		 */
 		if (specs && specs->modedb_len) {
 			for (i = 0; i < specs->modedb_len; i++) {
 				modedb = &specs->modedb[i];
@@ -533,7 +1482,7 @@ int hdmi_ouputmode_select(struct hdmi *hdmi, int edid_ok)
 		hdmi_sort_modelist(&hdmi->edid, hdmi->property->feature);
 	}
 
-	return HDMI_ERROR_SUCESS;
+	return HDMI_ERROR_SUCCESS;
 }
 
 /**
@@ -548,7 +1497,7 @@ int hdmi_videomode_to_vic(struct fb_videomode *vmode)
 	int i = 0;
 
 	for (i = 0; i < ARRAY_SIZE(hdmi_mode); i++) {
-		mode = (struct fb_videomode *)&(hdmi_mode[i].mode);
+		mode = (struct fb_videomode *)&hdmi_mode[i].mode;
 		if (vmode->vmode == mode->vmode &&
 		    vmode->refresh == mode->refresh &&
 		    vmode->xres == mode->xres &&
@@ -580,7 +1529,7 @@ const struct hdmi_video_timing *hdmi_vic2timing(int vic)
 
 	for (i = 0; i < ARRAY_SIZE(hdmi_mode); i++) {
 		if (hdmi_mode[i].vic == vic || hdmi_mode[i].vic_2nd == vic)
-			return &(hdmi_mode[i]);
+			return &hdmi_mode[i];
 	}
 	return NULL;
 }
@@ -596,7 +1545,7 @@ const struct fb_videomode *hdmi_vic_to_videomode(int vic)
 
 	if (vic == 0)
 		return NULL;
-	else if (vic & HDMI_VIDEO_DMT)
+	else if ((vic & HDMI_VIDEO_DMT) || (vic & HDMI_VIDEO_DISCRETE_VR))
 		vid = vic;
 	else
 		vid = vic & HDMI_VIC_MASK;
@@ -623,7 +1572,7 @@ void hdmi_init_modelist(struct hdmi *hdmi)
 	feature = hdmi->property->feature;
 	INIT_LIST_HEAD(&hdmi->edid.modelist);
 	for (i = 0; i < ARRAY_SIZE(hdmi_mode); i++) {
-		if (hdmi_mode[i].vic & HDMI_VIDEO_DMT)
+		if ((hdmi_mode[i].vic & HDMI_VIDEO_DMT) || (hdmi_mode[i].vic & HDMI_VIDEO_DISCRETE_VR))
 			continue;
 		if ((feature & SUPPORT_TMDS_600M) == 0 &&
 		    hdmi_mode[i].mode.pixclock > 340000000)
@@ -636,12 +1585,12 @@ void hdmi_init_modelist(struct hdmi *hdmi)
 			continue;
 		if ((feature & SUPPORT_1080I) == 0 &&
 		    hdmi_mode[i].mode.xres == 1920 &&
-		    hdmi_mode[i].mode.vmode == FB_VMODE_INTERLACED)
+		    (hdmi_mode[i].mode.vmode & FB_VMODE_INTERLACED))
 			continue;
 		if ((feature & SUPPORT_480I_576I) == 0 &&
 		    hdmi_mode[i].mode.xres == 720 &&
-		    hdmi_mode[i].mode.vmode == FB_VMODE_INTERLACED)
+		    (hdmi_mode[i].mode.vmode & FB_VMODE_INTERLACED))
 			continue;
-		hdmi_add_videomode(&(hdmi_mode[i].mode), head);
+		hdmi_add_videomode(&hdmi_mode[i].mode, head);
 	}
 }

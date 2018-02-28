@@ -849,6 +849,8 @@
 		pinctrl-1 = <&i2c5_gpio>;
 		clocks = <&clk_gates17 6>, <&clk_gates4 13>, <&clk_gates4 12>;
 		clock-names = "pclk_hdmi", "hdcp_clk_hdmi", "cec_clk_hdmi";
+		resets = <&reset RK3368_SRST_HDMI>;
+		reset-names = "hdmi";
 		status = "disabled";
 	};
 

@@ -1,5 +1,5 @@
 #include "rockchip-hdmi.h"
-#include "../../edid.h"
+#include "../../fbdev/edid.h"
 
 #ifdef EDIDDEBUG
 #define EDBG	DBG
@@ -34,18 +34,16 @@ static int hdmi_edid_checksum(unsigned char *buf)
 }
 
 /*
-	@Des	Parse Detail Timing Descriptor.
-	@Param	buf	:	pointer to DTD data.
-	@Param	pvic:	VIC of DTD descripted.
+ *	@Des	Parse Detail Timing Descriptor.
+ *	@Param	buf	:	pointer to DTD data.
+ *	@Param	pvic:	VIC of DTD descripted.
  */
 static int hdmi_edid_parse_dtd(unsigned char *block, struct fb_videomode *mode)
 {
 	mode->xres = H_ACTIVE;
 	mode->yres = V_ACTIVE;
 	mode->pixclock = PIXEL_CLOCK;
-/*	mode->pixclock /= 1000;
-	mode->pixclock = KHZ2PICOS(mode->pixclock);
-*/	mode->right_margin = H_SYNC_OFFSET;
+	mode->right_margin = H_SYNC_OFFSET;
 	mode->left_margin = (H_ACTIVE + H_BLANKING) -
 		(H_ACTIVE + H_SYNC_OFFSET + H_SYNC_WIDTH);
 	mode->upper_margin = V_BLANKING - V_SYNC_OFFSET -
@@ -57,8 +55,8 @@ static int hdmi_edid_parse_dtd(unsigned char *block, struct fb_videomode *mode)
 		mode->sync |= FB_SYNC_HOR_HIGH_ACT;
 	if (VSYNC_POSITIVE)
 		mode->sync |= FB_SYNC_VERT_HIGH_ACT;
-	mode->refresh = PIXEL_CLOCK/((H_ACTIVE + H_BLANKING) *
-				     (V_ACTIVE + V_BLANKING));
+	mode->refresh = PIXEL_CLOCK / ((H_ACTIVE + H_BLANKING) *
+				       (V_ACTIVE + V_BLANKING));
 	if (INTERLACED) {
 		mode->yres *= 2;
 		mode->upper_margin *= 2;
@@ -70,7 +68,7 @@ static int hdmi_edid_parse_dtd(unsigned char *block, struct fb_videomode *mode)
 
 	EDBG("<<<<<<<<Detailed Time>>>>>>>>>\n");
 	EDBG("%d KHz Refresh %d Hz",
-	     PIXEL_CLOCK/1000, mode->refresh);
+	     PIXEL_CLOCK / 1000, mode->refresh);
 	EDBG("%d %d %d %d ", H_ACTIVE, H_ACTIVE + H_SYNC_OFFSET,
 	     H_ACTIVE + H_SYNC_OFFSET + H_SYNC_WIDTH, H_ACTIVE + H_BLANKING);
 	EDBG("%d %d %d %d ", V_ACTIVE, V_ACTIVE + V_SYNC_OFFSET,
@@ -80,12 +78,35 @@ static int hdmi_edid_parse_dtd(unsigned char *block, struct fb_videomode *mode)
 	return E_HDMI_EDID_SUCCESS;
 }
 
-int hdmi_edid_parse_base(unsigned char *buf,
+static int edid_parse_prop_value(unsigned char *buf,
+				 struct hdmi_edid *pedid)
+{
+	unsigned char *block = &buf[0x36];
+
+	pedid->value.vid = ((buf[ID_MANUFACTURER_NAME_END] << 8) |
+				(buf[ID_MANUFACTURER_NAME]));
+	pedid->value.pid = ((buf[ID_MODEL + 1] << 8) |
+				(buf[ID_MODEL]));
+	pedid->value.sn = ((buf[ID_SERIAL_NUMBER + 3] << 24) |
+				(buf[ID_SERIAL_NUMBER + 2] << 16) |
+				(buf[ID_SERIAL_NUMBER + 1] << 8) |
+				buf[ID_SERIAL_NUMBER]);
+	pedid->value.xres = H_ACTIVE;
+	pedid->value.yres = V_ACTIVE;
+
+	pr_info("%s:read:vid=0x%x,pid=0x%x,sn=0x%x,xres=%d,yres=%d\n",
+		__func__, pedid->value.vid, pedid->value.pid,
+		pedid->value.sn, pedid->value.xres, pedid->value.yres);
+
+	return 0;
+}
+
+int hdmi_edid_parse_base(struct hdmi *hdmi, unsigned char *buf,
 			 int *extend_num, struct hdmi_edid *pedid)
 {
 	int rc = E_HDMI_EDID_SUCCESS;
 
-	if (buf == NULL || extend_num == NULL)
+	if (!buf || !extend_num)
 		return E_HDMI_EDID_PARAM;
 
 	*extend_num = buf[0x7e];
@@ -116,14 +137,21 @@ int hdmi_edid_parse_base(unsigned char *buf,
 	}
 
 	pedid->specs = kzalloc(sizeof(*pedid->specs), GFP_KERNEL);
-	if (pedid->specs == NULL)
+	if (!pedid->specs)
 		return E_HDMI_EDID_NOMEMORY;
 
 	fb_edid_to_monspecs(buf, pedid->specs);
 
+	if (hdmi->edid_auto_support)
+		edid_parse_prop_value(buf, pedid);
+
 out:
+	/* For some sink, edid checksum is failed because several
+	 * byte is wrong. To fix this case, we think it is a good
+	 * edid if 1 <= *extend_num <= 4.
+	 */
 	if ((rc != E_HDMI_EDID_SUCCESS) &&
-	    (*extend_num < 1 && *extend_num > 4))
+	    (*extend_num < 1 || *extend_num > 4))
 		return rc;
 	else
 		return E_HDMI_EDID_SUCCESS;
@@ -141,15 +169,7 @@ static int hdmi_edid_get_cea_svd(unsigned char *buf, struct hdmi_edid *pedid)
 		vic = buf[1 + i] & 0x7f;
 		hdmi_add_vic(vic, &pedid->modelist);
 	}
-/*
-	struct list_head *pos;
-	struct display_modelist *modelist;
-
-	list_for_each(pos, &pedid->modelist) {
-		modelist = list_entry(pos, struct display_modelist, list);
-		pr_info("%s vic %d\n", __FUNCTION__, modelist->vic);
-	}
-*/	return 0;
+	return 0;
 }
 
 /* Parse CEA Short Audio Descriptor */
@@ -158,22 +178,19 @@ static int hdmi_edid_parse_cea_sad(unsigned char *buf, struct hdmi_edid *pedid)
 	int i, count;
 
 	count = buf[0] & 0x1F;
-	pedid->audio = kmalloc((count/3)*sizeof(struct hdmi_audio), GFP_KERNEL);
-	if (pedid->audio == NULL)
+	pedid->audio = kmalloc((count / 3) * sizeof(struct hdmi_audio),
+			       GFP_KERNEL);
+	if (!pedid->audio)
 		return E_HDMI_EDID_NOMEMORY;
 
-	pedid->audio_num = count/3;
+	pedid->audio_num = count / 3;
 	for (i = 0; i < pedid->audio_num; i++) {
-		pedid->audio[i].type = (buf[1 + i*3] >> 3) & 0x0F;
-		pedid->audio[i].channel = (buf[1 + i*3] & 0x07) + 1;
-		pedid->audio[i].rate = buf[1 + i*3 + 1];
+		pedid->audio[i].type = (buf[1 + i * 3] >> 3) & 0x0F;
+		pedid->audio[i].channel = (buf[1 + i * 3] & 0x07) + 1;
+		pedid->audio[i].rate = buf[1 + i * 3 + 1];
 		if (pedid->audio[i].type == HDMI_AUDIO_LPCM)
-			pedid->audio[i].word_length = buf[1 + i*3 + 2];
-
-/*		pr_info("type %d channel %d rate %d word length %d\n",
-			pedid->audio[i].type, pedid->audio[i].channel,
-			pedid->audio[i].rate, pedid->audio[i].word_length);
-*/	}
+			pedid->audio[i].word_length = buf[1 + i * 3 + 2];
+	}
 	return E_HDMI_EDID_SUCCESS;
 }
 
@@ -267,6 +284,7 @@ static int hdmi_edid_parse_3dinfo(unsigned char *buf, struct list_head *head)
 
 	return 0;
 }
+
 static int hdmi_edmi_parse_vsdb(unsigned char *buf, struct hdmi_edid *pedid,
 				int cur_offset, int IEEEOUI)
 {
@@ -278,7 +296,7 @@ static int hdmi_edmi_parse_vsdb(unsigned char *buf, struct hdmi_edid *pedid,
 		pedid->sink_hdmi = 1;
 		pedid->cecaddress = buf[cur_offset + 5];
 		pedid->cecaddress |= buf[cur_offset + 4] << 8;
-		EDBG("[CEA] CEC Physical addres is 0x%08x.\n",
+		EDBG("[CEA] CEC Physical address is 0x%08x.\n",
 		     pedid->cecaddress);
 		if (count > 6)
 			pedid->deepcolor = (buf[cur_offset + 6] >> 3) & 0x0F;
@@ -315,19 +333,19 @@ static int hdmi_edmi_parse_vsdb(unsigned char *buf, struct hdmi_edid *pedid,
 				buf[cur_offset + 5] * 5000000;
 			EDBG("[CEA] maxtmdsclock is %d.\n",
 			     pedid->maxtmdsclock);
-			pedid->scdc_present = buf[cur_offset+6] >> 7;
+			pedid->scdc_present = buf[cur_offset + 6] >> 7;
 			pedid->rr_capable =
-				(buf[cur_offset+6]&0x40) >> 6;
+				(buf[cur_offset + 6] & 0x40) >> 6;
 			pedid->lte_340mcsc_scramble =
-				(buf[cur_offset+6]&0x08) >> 3;
+				(buf[cur_offset + 6] & 0x08) >> 3;
 			pedid->independent_view =
-				(buf[cur_offset+6]&0x04) >> 2;
+				(buf[cur_offset + 6] & 0x04) >> 2;
 			pedid->dual_view =
-				(buf[cur_offset+6]&0x02) >> 1;
+				(buf[cur_offset + 6] & 0x02) >> 1;
 			pedid->osd_disparity_3d =
-				buf[cur_offset+6] & 0x01;
+				buf[cur_offset + 6] & 0x01;
 			pedid->deepcolor_420 =
-				(buf[cur_offset+7] & 0x7) << 1;
+				(buf[cur_offset + 7] & 0x7) << 1;
 			break;
 		default:
 			pr_info("hf_vsdb_version = %d\n",
@@ -347,16 +365,25 @@ static void hdmi_edid_parse_yuv420cmdb(unsigned char *buf, int count,
 {
 	struct list_head *pos;
 	struct display_modelist *modelist;
-	int i, j, yuv420_mask, vic;
+	int i, j, yuv420_mask = 0, vic;
 
-	for (i = 0; i < count - 1; i++) {
-		EDBG("vic which support yuv420 mode is %x\n", buf[i]);
-		yuv420_mask |= buf[i] << (8 * i);
-	}
-	for (i = 0; i < 32; i++) {
-		if (yuv420_mask & (1 << i)) {
+	if (count == 1) {
+		list_for_each(pos, head) {
+			modelist =
+				list_entry(pos, struct display_modelist, list);
+			vic = modelist->vic | HDMI_VIDEO_YUV420;
+			hdmi_add_vic(vic, head);
+		}
+	} else {
+		for (i = 0; i < count - 1; i++) {
+			EDBG("vic which support yuv420 mode is %x\n", buf[i]);
+			yuv420_mask |= buf[i] << (8 * i);
+		}
+		for (i = 0; i < 32; i++) {
+			if (!(yuv420_mask & (1 << i)))
+				continue;
 			j = 0;
-			for (pos = head->next; pos != (head); pos = pos->next) {
+			list_for_each(pos, head) {
 				if (j++ == i) {
 					modelist =
 				list_entry(pos, struct display_modelist, list);
@@ -376,9 +403,9 @@ static int hdmi_edid_parse_extensions_cea(unsigned char *buf,
 {
 	unsigned int ddc_offset, native_dtd_num, cur_offset = 4;
 	unsigned int tag, IEEEOUI = 0, count, i;
-/*	unsigned int underscan_support, baseaudio_support; */
+	struct fb_videomode *vmode;
 
-	if (buf == NULL)
+	if (!buf)
 		return E_HDMI_EDID_PARAM;
 
 	/* Check ces extension version */
@@ -388,17 +415,11 @@ static int hdmi_edid_parse_extensions_cea(unsigned char *buf,
 	}
 
 	ddc_offset = buf[2];
-/*	underscan_support = (buf[3] >> 7) & 0x01;
-*/	pedid->baseaudio_support = (buf[3] >> 6) & 0x01;
+	pedid->baseaudio_support = (buf[3] >> 6) & 0x01;
 	pedid->ycbcr444 = (buf[3] >> 5) & 0x01;
 	pedid->ycbcr422 = (buf[3] >> 4) & 0x01;
 	native_dtd_num = buf[3] & 0x0F;
-/*	EDBG("[CEA] ddc_offset %d underscan_support %d
-	    baseaudio_support %d yuv_support %d
-	    native_dtd_num %d\n",
-	    ddc_offset, underscan_support, baseaudio_support,
-	    yuv_support, native_dtd_num);
-*/	/* Parse data block */
+	/* Parse data block */
 	while (cur_offset < ddc_offset) {
 		tag = buf[cur_offset] >> 5;
 		count = buf[cur_offset] & 0x1F;
@@ -443,6 +464,12 @@ static int hdmi_edid_parse_extensions_cea(unsigned char *buf,
 				EDBG("value is %02x\n", buf[cur_offset + 2]);
 				pedid->colorimetry = buf[cur_offset + 2];
 				break;
+			case 0x06:
+				EDBG("[CEA] HDR Static Metedata data Block\n");
+				for (i = 0; i < count - 1; i++)
+					pedid->hdr.data[i] =
+						buf[cur_offset + 2 + i];
+				break;
 			case 0x0e:
 				EDBG("[CEA] YCBCR 4:2:0 Video Data Block\n");
 				for (i = 0; i < count - 1; i++) {
@@ -457,7 +484,7 @@ static int hdmi_edid_parse_extensions_cea(unsigned char *buf,
 				break;
 			case 0x0f:
 				EDBG("[CEA] YCBCR 4:2:0 Capability Map Data\n");
-				hdmi_edid_parse_yuv420cmdb(&buf[cur_offset+2],
+				hdmi_edid_parse_yuv420cmdb(&buf[cur_offset + 2],
 							   count,
 							   &pedid->modelist);
 				pedid->ycbcr420 = 1;
@@ -470,13 +497,11 @@ static int hdmi_edid_parse_extensions_cea(unsigned char *buf,
 		}
 		cur_offset += (buf[cur_offset] & 0x1F) + 1;
 	}
-#if 1
-{
-	/* Parse DTD */
-	struct fb_videomode *vmode =
-		kmalloc(sizeof(struct fb_videomode), GFP_KERNEL);
 
-	if (vmode == NULL)
+	/* Parse DTD */
+	vmode = kmalloc(sizeof(*vmode), GFP_KERNEL);
+
+	if (!vmode)
 		return E_HDMI_EDID_SUCCESS;
 	while (ddc_offset < HDMI_EDID_BLOCK_SIZE - 2) {
 		if (!buf[ddc_offset] && !buf[ddc_offset + 1])
@@ -487,8 +512,7 @@ static int hdmi_edid_parse_extensions_cea(unsigned char *buf,
 		ddc_offset += 18;
 	}
 	kfree(vmode);
-}
-#endif
+
 	return E_HDMI_EDID_SUCCESS;
 }
 
@@ -496,7 +520,7 @@ int hdmi_edid_parse_extensions(unsigned char *buf, struct hdmi_edid *pedid)
 {
 	int rc;
 
-	if (buf == NULL || pedid == NULL)
+	if (!buf || !pedid)
 		return E_HDMI_EDID_PARAM;
 
 	/* Checksum */

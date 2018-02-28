@@ -28,6 +28,8 @@
 #include "../../drivers/staging/android/sw_sync.h"
 #include <linux/file.h>
 #include <linux/kthread.h>
+#include <linux/pm_runtime.h>
+#include <linux/version.h>
 
 
 #define RK30_MAX_LCDC_SUPPORT	2
@@ -80,20 +82,6 @@
 #define RK_LF_STATUS_NC                  0xfe
 #define RK_LF_MAX_TIMEOUT 			 (1600000UL << 6)	//>0.64s
 
-
-/* x y mirror or rotate mode */
-#define NO_MIRROR	0
-#define X_MIRROR    	1		/* up-down flip*/
-#define Y_MIRROR    	2		/* left-right flip */
-#define X_Y_MIRROR    	3		/* the same as rotate 180 degrees */
-#define ROTATE_90	4		/* clockwise rotate 90 degrees */
-#define ROTATE_180	8		/* rotate 180 degrees
-					 * It is recommended to use X_Y_MIRROR
-					 * rather than ROTATE_180
-					 */
-#define ROTATE_270	12		/* clockwise rotate 270 degrees */
-
-
 /**
 * pixel align value for gpu,align as 64 bytes in an odd number of times
 */
@@ -117,28 +105,27 @@ extern u64 rk_fb_get_prmry_screen_framedone_t(void);
 extern int rk_fb_set_prmry_screen_status(int status);
 extern bool rk_fb_poll_wait_frame_complete(void);
 
-/********************************************************************
-**          display output interface supported by rockchip lcdc                       *
-********************************************************************/
-/* */
-#define OUT_P888            0	//24bit screen,connect to lcdc D0~D23
-#define OUT_P666            1	//18bit screen,connect to lcdc D0~D17
-#define OUT_P565            2
-#define OUT_S888x           4
-#define OUT_CCIR656         6
-#define OUT_S888            8
-#define OUT_S888DUMY        12
-#define OUT_YUV_420	    14
-#define OUT_P101010	    15
-#define OUT_YUV_420_10BIT   16
-#define OUT_P16BPP4         24
-#define OUT_D888_P666       0x21	//18bit screen,connect to lcdc D2~D7, D10~D15, D18~D23
-#define OUT_D888_P565       0x22
+enum {
+	CSC_BT601,
+	CSC_BT709,
+	CSC_BT2020,
+};
+#define CSC_SHIFT	6
+#define CSC_MASK	(0x3 << CSC_SHIFT)
+#define CSC_FORMAT(x)	(((x) & CSC_MASK) >> CSC_SHIFT)
+
+#define BT601(x)	((CSC_BT601 << CSC_SHIFT) | ((x) & ~CSC_MASK))
+#define BT709(x)	((CSC_BT709 << CSC_SHIFT) | ((x) & ~CSC_MASK))
+#define BT2020(x)	((CSC_BT2020 << CSC_SHIFT) | ((x) & ~CSC_MASK))
+
+enum {
+	SDR_DATA,
+	HDR_DATA,
+};
 
 /**
  * pixel format definitions,this is copy from android/system/core/include/system/graphics.h
  */
-
 enum {
 	HAL_PIXEL_FORMAT_RGBA_8888 = 1,
 	HAL_PIXEL_FORMAT_RGBX_8888 = 2,
@@ -187,6 +174,10 @@ enum {
 	HAL_PIXEL_FORMAT_YV12 = 0x32315659,	// YCrCb 4:2:0 Planar
 
 	/* Legacy formats (deprecated), used by ImageFormat.java */
+
+	/*
+	 * YCbCr format default is BT601.
+	 */
 	HAL_PIXEL_FORMAT_YCbCr_422_SP = 0x10,	// NV16
 	HAL_PIXEL_FORMAT_YCrCb_420_SP = 0x11,	// NV21
 	HAL_PIXEL_FORMAT_YCbCr_422_I = 0x14,	// YUY2
@@ -195,35 +186,76 @@ enum {
 	
 	HAL_PIXEL_FORMAT_YCrCb_NV12_10	    = 0x22, // YUV420_1obit
 	HAL_PIXEL_FORMAT_YCbCr_422_SP_10	= 0x23, // YUV422_1obit
-	HAL_PIXEL_FORMAT_YCrCb_420_SP_10	= 0x24, //YUV444_1obit
+	HAL_PIXEL_FORMAT_YCrCb_444_SP_10	= 0x24, //YUV444_1obit
 
 	HAL_PIXEL_FORMAT_YCrCb_444 = 0x25,	//yuv444
 	HAL_PIXEL_FORMAT_FBDC_RGB565	= 0x26,
 	HAL_PIXEL_FORMAT_FBDC_U8U8U8U8	= 0x27, /*ARGB888*/
 	HAL_PIXEL_FORMAT_FBDC_U8U8U8	= 0x28, /*RGBP888*/
 	HAL_PIXEL_FORMAT_FBDC_RGBA888	= 0x29, /*ABGR888*/
+	HAL_PIXEL_FORMAT_BGRX_8888 = 0x30,
+	HAL_PIXEL_FORMAT_BGR_888 = 0x31,
+	HAL_PIXEL_FORMAT_BGR_565 = 0x32,
+
+	HAL_PIXEL_FORMAT_YUYV422 = 0x33,
+	HAL_PIXEL_FORMAT_YUYV420 = 0x34,
+	HAL_PIXEL_FORMAT_UYVY422 = 0x35,
+	HAL_PIXEL_FORMAT_UYVY420 = 0x36,
+
+	HAL_PIXEL_FORMAT_YCrCb_NV12_BT709 =
+			BT709(HAL_PIXEL_FORMAT_YCrCb_NV12),
+	HAL_PIXEL_FORMAT_YCrCb_NV12_VIDEO_BT709 =
+			BT709(HAL_PIXEL_FORMAT_YCrCb_NV12_VIDEO),
+	HAL_PIXEL_FORMAT_YCbCr_422_SP_BT709 =
+			BT709(HAL_PIXEL_FORMAT_YCbCr_422_SP),
+	HAL_PIXEL_FORMAT_YCrCb_444_BT709 =
+			BT709(HAL_PIXEL_FORMAT_YCrCb_444),
+
+	HAL_PIXEL_FORMAT_YCrCb_NV12_10_BT709 =
+			BT709(HAL_PIXEL_FORMAT_YCrCb_NV12_10),
+	HAL_PIXEL_FORMAT_YCbCr_422_SP_10_BT709	=
+			BT709(HAL_PIXEL_FORMAT_YCbCr_422_SP_10),
+	HAL_PIXEL_FORMAT_YCrCb_420_SP_10_BT709	=
+			BT709(HAL_PIXEL_FORMAT_YCrCb_444_SP_10),
+
+	HAL_PIXEL_FORMAT_YCrCb_NV12_10_BT2020 =
+			BT2020(HAL_PIXEL_FORMAT_YCrCb_NV12_10),
+	HAL_PIXEL_FORMAT_YCbCr_422_SP_10_BT2020	=
+			BT2020(HAL_PIXEL_FORMAT_YCbCr_422_SP_10),
+	HAL_PIXEL_FORMAT_YCrCb_420_SP_10_BT2020	=
+			BT2020(HAL_PIXEL_FORMAT_YCrCb_444_SP_10),
 };
 
 //display data format
 enum data_format {
-	ARGB888 = 0,
-	RGB888,
-	RGB565,
-	YUV420 = 4,
-	YUV422,
-	YUV444,
+	ARGB888,/*don't update and insert other format*/
+	RGB888, /*don't update and insert other format*/
+	RGB565, /*don't update and insert other format*/
+	BGR888,
 	XRGB888,
 	XBGR888,
 	ABGR888,
-	YUV420_A = 10,
-	YUV422_A,
-	YUV444_A,
-	YUV420_NV21,
-	FBDC_RGB_565 = 0x26,
+	BGR565,
+	FBDC_RGB_565,
 	FBDC_ARGB_888,
 	FBDC_RGBX_888,
 	FBDC_ABGR_888,
+	YUV420,
+	YUV422,
+	YUV444,
+	YUV420_A,
+	YUV422_A,
+	YUV444_A,
+	YUV420_NV21,
+	YUYV422,
+	YUYV420,
+	UYVY422,
+	UYVY420
 };
+#define IS_YUV_FMT(fmt) ((fmt >= YUV420) ? 1 : 0)
+#define IS_RGB_FMT(fmt) ((fmt < YUV420) ? 1 : 0)
+#define IS_FBDC_FMT(fmt) \
+	(((fmt >= FBDC_RGB_565) && (fmt <= FBDC_ABGR_888)) ? 1 : 0)
 
 enum
 {
@@ -251,8 +283,40 @@ typedef enum {
 typedef enum {
 	GET_PAGE_FAULT	= 0x0,
 	CLR_PAGE_FAULT  = 0x1,
-	UNMASK_PAGE_FAULT = 0x2
+	UNMASK_PAGE_FAULT = 0x2,
+	UPDATE_CABC_PWM = 0x3,
+	SET_DSP_MIRROR = 0x4
 } extern_func;
+
+enum rk_vop_feature {
+	SUPPORT_VOP_IDENTIFY	= BIT(0),
+	SUPPORT_IFBDC		= BIT(1),
+	SUPPORT_AFBDC		= BIT(2),
+	SUPPORT_WRITE_BACK	= BIT(3),
+	SUPPORT_YUV420_OUTPUT	= BIT(4)
+};
+
+struct rk_vop_property {
+	u32 feature;
+	u32 max_output_x;
+	u32 max_output_y;
+};
+
+enum rk_win_feature {
+	SUPPORT_WIN_IDENTIFY	= BIT(0),
+	SUPPORT_HW_EXIST	= BIT(1),
+	SUPPORT_SCALE		= BIT(2),
+	SUPPORT_YUV		= BIT(3),
+	SUPPORT_YUV10BIT	= BIT(4),
+	SUPPORT_MULTI_AREA	= BIT(5),
+	SUPPORT_HWC_LAYER	= BIT(6)
+};
+
+struct rk_win_property {
+	u32 feature;
+	u32 max_input_x;
+	u32 max_input_y;
+};
 
 struct rk_fb_rgb {
 	struct fb_bitfield red;
@@ -270,7 +334,7 @@ struct rk_fb_frame_time {
 struct rk_fb_vsync {
 	wait_queue_head_t wait;
 	ktime_t timestamp;
-	bool active;
+	int active;
 	bool irq_stop;
 	int irq_refcount;
 	struct mutex irq_lock;
@@ -316,6 +380,16 @@ struct rk_lcdc_post_cfg {
 	u32 ysize;
 };
 
+struct rk_fb_wb_cfg {
+	u8  data_format;
+	short ion_fd;
+	u32 phy_addr;
+	u16 xsize;
+	u16 ysize;
+	u8 reserved0;
+	u32 reversed1;
+};
+
 struct rk_lcdc_bcsh {
 	bool enable;
 	u16 brightness;
@@ -328,7 +402,9 @@ struct rk_lcdc_bcsh {
 struct rk_lcdc_win_area {
 	bool state;
 	enum data_format format;
+	u8 data_space;		/* SDR or HDR */
 	u8 fmt_cfg;
+	u8 yuyv_fmt;
 	u8 swap_rb;
 	u8 swap_uv;
 	u32 y_offset;		/*yuv/rgb offset  -->LCDC_WINx_YRGB_MSTx*/
@@ -376,11 +452,13 @@ struct rk_lcdc_win_area {
 struct rk_lcdc_win {
 	char name[5];
 	int id;
+	struct rk_win_property property;
 	bool state;		/*on or off*/
 	bool last_state;		/*on or off*/
 	u32 pseudo_pal[16];
 	int z_order;		/*win sel layer*/
 	u8 fmt_10;
+	u8 colorspace;
 	u32 reserved;
 	u32 area_num;
 	u32 scale_yrgb_x;
@@ -410,9 +488,11 @@ struct rk_lcdc_win {
 	u8 alpha_en;
 	u8 alpha_mode;
 	u16 g_alpha_val;
-	u8  mirror_en;
+	u8 mirror_en;
 	u32 color_key_val;
 	u8 csc_mode;
+	u8 xmirror;
+	u8 ymirror;
 
 	struct rk_lcdc_win_area area[RK_WIN_MAX_AREA];
 	struct rk_lcdc_post_cfg post_cfg;
@@ -425,6 +505,8 @@ struct rk_fb_trsm_ops {
 	int (*disable)(void);
 	int (*dsp_pwr_on) (void);
 	int (*dsp_pwr_off) (void);
+	void (*refresh)(unsigned int xpos, unsigned int ypos,
+		       unsigned int xsize, unsigned int ysize);
 };
 
 struct rk_lcdc_drv_ops {
@@ -485,6 +567,7 @@ struct rk_lcdc_drv_ops {
 	int (*area_support_num)(struct rk_lcdc_driver *dev_drv, unsigned int *area_support);
 	int (*extern_func)(struct rk_lcdc_driver *dev_drv, int cmd);
 	int (*wait_frame_start)(struct rk_lcdc_driver *dev_drv, int enable);
+	int (*set_wb)(struct rk_lcdc_driver *dev_drv);
 };
 
 struct rk_fb_area_par {
@@ -505,8 +588,8 @@ struct rk_fb_area_par {
 	u8  fbdc_en;
 	u8  fbdc_cor_en;
 	u8  fbdc_data_format;
-	u16 reserved0;
-	u32 reserved1;
+	u16 data_space;	/* SDR or HDR */
+	u32 reserved0;
 };
 
 
@@ -525,12 +608,23 @@ struct rk_fb_win_cfg_data {
 	short ret_fence_fd;
 	short rel_fence_fd[RK_MAX_BUF_NUM];
 	struct  rk_fb_win_par win_par[RK30_MAX_LAYER_SUPPORT];
-	struct  rk_lcdc_post_cfg post_cfg;
+	struct  rk_fb_wb_cfg wb_cfg;
+};
+
+struct rk_fb_reg_wb_data {
+	bool state;
+	u8 data_format;
+	struct ion_handle *ion_handle;
+	unsigned long smem_start;
+	unsigned long cbr_start;	/*Cbr memory start address*/
+	u16 xsize;
+	u16 ysize;
 };
 
 struct rk_fb_reg_area_data {
 	struct sync_fence *acq_fence;
 	u8 data_format;        /*layer data fmt*/
+	u8 data_space;		/* indicate SDR or HDR */
 	u8  index_buf;          /*judge if the buffer is index*/
 	u32 y_offset;		/*yuv/rgb offset  -->LCDC_WINx_YRGB_MSTx*/
 	u32 c_offset;		/*cb cr offset--->LCDC_WINx_CBR_MSTx*/
@@ -571,6 +665,7 @@ struct rk_fb_reg_win_data {
 	u8 alpha_mode;
 	u16 g_alpha_val;
 	u8  mirror_en;
+	u8 colorspace;
 
 	struct rk_fb_reg_area_data reg_area_data[RK_WIN_MAX_AREA];
 };
@@ -581,16 +676,20 @@ struct rk_fb_reg_data {
 	int    buf_num;
 	int    acq_num;
 	struct rk_fb_reg_win_data reg_win_data[RK30_MAX_LAYER_SUPPORT];
-	struct rk_lcdc_post_cfg post_cfg;
+	struct rk_fb_reg_wb_data reg_wb_data;
 };
 
 struct rk_lcdc_driver {
 	char name[6];
+	int  te_irq;
 	int  id;
 	int  prop;
 	struct device *dev;
+	u32 version;
+	struct rk_vop_property property;
 
 	struct rk_lcdc_win *win[RK_MAX_FB_SUPPORT];
+	struct rk_fb_reg_wb_data wb_data;
 	int lcdc_win_num;
 	int num_buf;		//the num_of buffer
 	int atv_layer_cnt;
@@ -602,6 +701,7 @@ struct rk_lcdc_driver {
 	u16 rotate_mode;
 	u16 cabc_mode;
 	u16 overlay_mode;
+	u16 pre_overlay;
 	u16 output_color;
 
 	u16  fb_win_map;
@@ -614,6 +714,8 @@ struct rk_lcdc_driver {
 	char mmu_dts_name[40];
 	struct device *mmu_dev;
 	int iommu_enabled;
+	int dsp_mode;
+	bool hot_plug_state;
 
 	struct rk_fb_reg_area_data reg_area_data;
 	/*
@@ -637,6 +739,7 @@ struct rk_lcdc_driver {
 	struct sw_sync_timeline *timeline;
 	int			timeline_max;
 	int			suspend_flag;
+	int			shutdown_flag;
 	int standby;
 	struct list_head	update_regs_list;
 	struct list_head	saved_list;
@@ -712,6 +815,8 @@ extern int rk_fb_register(struct rk_lcdc_driver *dev_drv,
 				struct rk_lcdc_win *win, int id);
 extern int rk_fb_unregister(struct rk_lcdc_driver *dev_drv);
 extern struct rk_lcdc_driver *rk_get_lcdc_drv(char *name);
+extern int rk_fb_get_extern_screen(struct rk_screen *screen);
+extern int rk_fb_set_vop_pwm(void);
 extern int rk_fb_get_prmry_screen( struct rk_screen *screen);
 extern int rk_fb_set_prmry_screen(struct rk_screen *screen);
 extern u32 rk_fb_get_prmry_screen_pixclock(void);
@@ -741,5 +846,6 @@ int rk_fb_get_display_policy(void);
 int rk_fb_pixel_width(int data_format);
 void trace_buffer_dump(struct device *dev,
 			      struct rk_lcdc_driver *dev_drv);
+int rk_fb_set_car_reverse_status(struct rk_lcdc_driver *dev_drv, int status);
 extern int rockchip_get_screen_type(void);
 #endif

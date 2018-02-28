@@ -234,7 +234,7 @@ static int rk_fb_data_fmt(int data_format, int bits_per_pixel)
 		case HAL_PIXEL_FORMAT_YCbCr_422_SP_10:	/* yuv444 */
 			fb_data_fmt = YUV422_A;
 			break;
-		case HAL_PIXEL_FORMAT_YCrCb_420_SP_10:	/* yuv444 */
+		case HAL_PIXEL_FORMAT_YCrCb_444_SP_10:	/* yuv444 */
 			fb_data_fmt = YUV444_A;
 			break;
 		case HAL_PIXEL_FORMAT_FBDC_RGB565:	/* fbdc rgb565*/
@@ -2881,7 +2881,7 @@ static int rk_fb_blank(int blank_mode, struct fb_info *info)
 	mutex_lock(&dev_drv->switch_screen);
 #if defined(CONFIG_RK_HDMI)
 	if ((rk_fb->disp_mode == ONE_DUAL) &&
-	    (hdmi_get_hotplug() == HDMI_HPD_ACTIVED)) {
+	    (hdmi_get_hotplug() == HDMI_HPD_ACTIVATED)) {
 		printk(KERN_INFO "hdmi is connect , not blank lcdc\n");
 	} else
 #endif
@@ -3462,12 +3462,10 @@ int rk_fb_switch_screen(struct rk_screen *screen, int enable, int lcdc_id)
 	if ((rk_fb->disp_mode == ONE_DUAL) ||
 	    (rk_fb->disp_mode == NO_DUAL)) {
 		if ((dev_drv->ops->backlight_close) &&
-		    (rk_fb->disp_policy != DISPLAY_POLICY_BOX) &&
-		    (rk_fb->disp_policy != DISPLAY_POLICY_BOX_TEMP))
+		    (rk_fb->disp_policy != DISPLAY_POLICY_BOX))
 			dev_drv->ops->backlight_close(dev_drv, 1);
 		if (!dev_drv->uboot_logo || load_screen ||
-				((rk_fb->disp_policy != DISPLAY_POLICY_BOX) &&
-				 (rk_fb->disp_policy != DISPLAY_POLICY_BOX_TEMP))) {
+				((rk_fb->disp_policy != DISPLAY_POLICY_BOX))) {
 			if (dev_drv->ops->dsp_black)
 				dev_drv->ops->dsp_black(dev_drv, 0);
 		}
@@ -3488,8 +3486,7 @@ int rk_fb_switch_screen(struct rk_screen *screen, int enable, int lcdc_id)
 		/* if used one lcdc to dual disp, no need to close win */
 		if ((rk_fb->disp_mode == ONE_DUAL) ||
 		    ((rk_fb->disp_mode == NO_DUAL) &&
-		    (rk_fb->disp_policy != DISPLAY_POLICY_BOX) &&
-		    (rk_fb->disp_policy != DISPLAY_POLICY_BOX_TEMP))) {
+		    (rk_fb->disp_policy != DISPLAY_POLICY_BOX))) {
 			dev_drv->cur_screen = dev_drv->screen0;
 			dev_drv->ops->load_screen(dev_drv, 1);
 			/* force modify dsp size */
@@ -3519,8 +3516,7 @@ int rk_fb_switch_screen(struct rk_screen *screen, int enable, int lcdc_id)
 			/*if (dev_drv->ops->dsp_black)
 				dev_drv->ops->dsp_black(dev_drv, 0);*/
 			if ((dev_drv->ops->backlight_close) &&
-			    (rk_fb->disp_policy != DISPLAY_POLICY_BOX) &&
-			    (rk_fb->disp_policy != DISPLAY_POLICY_BOX_TEMP))
+			    (rk_fb->disp_policy != DISPLAY_POLICY_BOX))
 				dev_drv->ops->backlight_close(dev_drv, 0);
 		} else if (rk_fb->num_lcdc > 1) {
 			/* If there is more than one lcdc device, we disable
@@ -3557,8 +3553,7 @@ int rk_fb_switch_screen(struct rk_screen *screen, int enable, int lcdc_id)
 		dev_drv->cur_screen->y_mirror = dev_drv->rotate_mode & Y_MIRROR;
 	}
 	if (!dev_drv->uboot_logo || load_screen ||
-	    ((rk_fb->disp_policy != DISPLAY_POLICY_BOX) &&
-	     (rk_fb->disp_policy != DISPLAY_POLICY_BOX_TEMP))) {
+	    ((rk_fb->disp_policy != DISPLAY_POLICY_BOX))) {
 		for (i = 0; i < dev_drv->lcdc_win_num; i++) {
 			info = rk_fb->fb[dev_drv->fb_index_base + i];
 			fb_par = (struct rk_fb_par *)info->par;
@@ -3618,7 +3613,6 @@ int rk_fb_switch_screen(struct rk_screen *screen, int enable, int lcdc_id)
 			dev_drv->ops->dsp_black(dev_drv, 0);*/
 		if ((dev_drv->ops->backlight_close) &&
 		    (rk_fb->disp_policy != DISPLAY_POLICY_BOX) &&
-		    (rk_fb->disp_policy != DISPLAY_POLICY_BOX_TEMP) &&
 		    (rk_fb->disp_mode == ONE_DUAL))
 			dev_drv->ops->backlight_close(dev_drv, 0);
 	}
